@@ -1,0 +1,7 @@
+[package]
+name = "citrine"
+version = "0.1.0"
+authors = ["Aceeri <conmcclusk@gmail.com>"]
+description = "Amethyst's soon-to-be UI toolkit"
+
+[dependencies]
