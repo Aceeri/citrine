@@ -2,7 +2,9 @@
 name = "citrine"
 version = "0.1.0"
 authors = ["Aceeri <conmcclusk@gmail.com>"]
-description = "Amethyst's soon-to-be UI toolkit"
+description = "Amethysts soon-to-be UI toolkit"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
+cassowary = "0.2.1"
+froggy = "0.3.0"
