@@ -8,3 +8,4 @@
 
 ### Resources:
 - [Cassowary Linear Arithmetic Constraint Solving Algorithm](http://www.badros.com/greg/papers/cassowary-tr.pdf)
+- [Cassowary-rs Documentation](https://dylanede.github.io/cassowary-rs/cassowary/index.html)
