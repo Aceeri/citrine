@@ -9,15 +9,17 @@ macro_rules! define_component {
     }
 }
 
+#[derive(Debug)]
 pub enum Coordinate {
     /// Coordinate space in pixels.
-    Pixel(u32),
+    Pixel(f64),
     /// Coordinate space in percentage of parent.
     Percent(f64),
 }
 
 /// Defines the UI entity that is the parent of this
 /// UI section.
+#[derive(Debug)]
 pub struct Parent {
     /// Defines another `Entity` as the parent UI of this one.
     pub entity: Entity,
@@ -26,7 +28,7 @@ pub struct Parent {
 /// Position of the UI section.
 ///
 /// Top/left/bottom/right are the relations to the parent's bounds.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Position {
     /// How the position behaves.
     pub kind: PositionKind,
@@ -41,6 +43,7 @@ pub struct Position {
 }
 
 /// Type of positioning. Default is `Relative`.
+#[derive(Debug)]
 pub enum PositionKind {
     /// Positions in the parent's dimensions without regard to other portions of the UI.
     Absolute,
