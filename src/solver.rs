@@ -215,9 +215,29 @@ impl<'a> System<'a> for SolverSystem {
                 println!("  {:?}", entity);
             }
 
+            for (entity, position) in (&*entities, flagged.positions).join() {
+                match position.kind {
+                    PositionKind::Absolute |
+                    PositionKind::Relative => {
+                        let left_bound_key = (entity, "left_bound");
+                        let upper_bound_key = (entity, "upper_bound");
+                        let left_align_key = (entity, "left_align");
+                        let top_align_key = (entity, "top_align");
+                        
+                        let left_bound = self.fill_variable(&left_bound_key, None);
+                        let upper_bound = self.fill_variable(&upper_bound_key, None);
+
+                        self.replace_constraint(&left_align_key, left_bound |EQ(WEAK)| 0.0);
+                        self.replace_constraint(&top_align_key, upper_bound |EQ(WEAK)| 0.0);
+
+                    },
+                    PositionKind::Free => { },
+                }
+            }
+
+            // Set left/right/upper/lower bounds for the UI based on the parent's bounds.
             for (entity, parent, position) in (&*entities, flagged.parents, &class.positions).join() {
                 match position.kind {
-                    // Set left/right/upper/lower bounds for the UI.
                     PositionKind::Absolute |
                     PositionKind::Relative => {
                         let mut bound = |string: &'static str, relation: WeightedRelation | {
@@ -239,9 +259,9 @@ impl<'a> System<'a> for SolverSystem {
                 }
             }
 
+            // Set left/right/upper/lower bounds for the UI, falls back to the viewport for no parent.
             for (entity, _, position) in (&*entities, !&class.parents, &class.positions).join() {
                 match position.kind {
-                    // Set left/right/upper/lower bounds for the UI.
                     PositionKind::Absolute |
                     PositionKind::Relative => {
                         let key = (entity, "left_bound");
@@ -264,6 +284,7 @@ impl<'a> System<'a> for SolverSystem {
                         let constraint = var |LE(REQUIRED)| self.viewport[1];
                         self.replace_constraint(&key, constraint);
                     },
+                    // TODO: Set bounds for free form positions
                     PositionKind::Free => { }, // Do nothing.
                 }
             }
