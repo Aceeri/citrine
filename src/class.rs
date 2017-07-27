@@ -10,6 +10,11 @@ macro_rules! define_component {
     }
 }
 
+pub struct Viewport {
+    pub width: u32,
+    pub height: u32,
+}
+
 #[derive(Clone, Debug)]
 pub enum Coordinate {
     /// Coordinate space in pixels.

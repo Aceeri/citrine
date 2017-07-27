@@ -5,7 +5,7 @@ use std::collections::hash_map::Entry;
 use cassowary::{Constraint, Solver, Variable};
 use cassowary::strength::{WEAK, MEDIUM, STRONG, REQUIRED};
 use cassowary::WeightedRelation::{self, LE, EQ, GE};
-use specs::{Component, Entity, Entities, Fetch, Join, ReadStorage, System, WriteStorage};
+use specs::{Component, Entity, Entities, Fetch, FetchMut, Join, ReadStorage, System, WriteStorage};
 
 use ::class::*;
 use ::track::BitSetJoin;
@@ -16,7 +16,10 @@ type Key = (Entity, &'static str);
 /// components that are related to the UI and converting them into the `FlaggedStorage`s
 /// so we can just iterate over the flagged portions.
 macro_rules! class {
-    ( $( $name:ident => $component:ident, )* ) => {
+    (
+        res [ $( $res_name:ident => $resource:ident, )* ]
+        comp [ $( $name:ident => $component:ident, )* ]
+    ) => {
         /*
         #[derive(Clone, Debug, Eq, Hash, PartialEq)]
         pub enum Id {
@@ -30,12 +33,18 @@ macro_rules! class {
         #[derive(SystemData)]
         pub struct ClassData<'a> {
             $(
+                $res_name: Fetch<'a, $resource>,
+            )*
+            $(
                 $name: ReadStorage<'a, $component>,
             )*
         }
 
         #[derive(SystemData)]
         pub struct ClassDataMut<'a> {
+            $(
+                $res_name: FetchMut<'a, $resource>,
+            )*
             $(
                 $name: WriteStorage<'a, $component>,
             )*
@@ -74,21 +83,6 @@ macro_rules! class {
             }
         }
 
-        #[derive(Default)]
-        pub struct ClassSet {
-            $(
-                $name: HashSet<Entity>,
-            )*
-        }
-
-        impl ClassSet {
-            pub fn clear_entity(&mut self, entity: &Entity) {
-                $(
-                    self.$name.remove(entity);
-                )*
-            }
-        }
-
         pub struct ResetSystem;
         impl<'a> System<'a> for ResetSystem {
             type SystemData = ClassDataMut<'a>;
@@ -103,17 +97,23 @@ macro_rules! class {
 }
 
 class!(
-    parents => Parent,
-    positions => Position,
-    bounds => Bounds,
+    res [
+        viewport => Viewport,
+    ]
+    comp [
+        parents => Parent,
+        children => Children,
+        positions => Position,
+        bounds => Bounds,
+    ]
 );
 
 pub struct SolverSystem {
-    x: usize,
     solver: Solver,
 
     // Variables
     viewport: [Variable; 2], // width, height
+    dimensions: [u32; 2], 
 
     key_map: HashMap<Key, Variable>,
     var_map: HashMap<Variable, Key>,
@@ -124,9 +124,9 @@ pub struct SolverSystem {
 impl Default for SolverSystem {
     fn default() -> Self {
         let mut system = SolverSystem {
-            x: 0,
             solver: Solver::new(),
             viewport: [Variable::new(), Variable::new()],
+            dimensions: [0, 0],
 
             key_map: HashMap::new(),
             var_map: HashMap::new(),
@@ -146,12 +146,13 @@ impl SolverSystem {
         // Viewport Variables
         self.solver.add_edit_variable(self.viewport[0], REQUIRED - 1.0);
         self.solver.add_edit_variable(self.viewport[1], REQUIRED - 1.0);
-        self.suggest_viewport(300.0f64, 300.0f64);
+        self.suggest_viewport(300, 300);
     }
 
-    fn suggest_viewport(&mut self, width: f64, height: f64) {
-        self.solver.suggest_value(self.viewport[0], width);
-        self.solver.suggest_value(self.viewport[1], height);
+    fn suggest_viewport(&mut self, width: u32, height: u32) {
+        self.dimensions = [width, height];
+        self.solver.suggest_value(self.viewport[0], width as f64);
+        self.solver.suggest_value(self.viewport[1], height as f64);
     }
 
     fn has_variable(&self, key: &Key) -> bool {
@@ -208,8 +209,16 @@ impl SolverSystem {
 }
 
 impl<'a> System<'a> for SolverSystem {
-    type SystemData = (Entities<'a>, ClassData<'a>);
+    type SystemData = (
+        Entities<'a>,
+        ClassData<'a>
+    );
     fn run(&mut self, (entities, class): Self::SystemData) {
+        // Check if the viewport was changed
+        if self.dimensions[0] != class.viewport.width || self.dimensions[1] != class.viewport.height {
+            self.suggest_viewport(class.viewport.width, class.viewport.height);
+        }
+        
         {
             let flagged = FlaggedClass::from(&class);
 
@@ -350,7 +359,7 @@ impl<'a> System<'a> for SolverSystem {
                                 lower_bound - upper_bound |EQ(WEAK)| (parent_lower_bound - parent_upper_bound) * percent
                             },
                             None => {
-                                lower_bound - upper_bound |EQ(WEAK)| self.viewport[0] * percent
+                                lower_bound - upper_bound |EQ(WEAK)| self.viewport[1] * percent
                             },
                         }
                     }
