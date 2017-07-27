@@ -4,11 +4,13 @@ extern crate specs;
 #[macro_use]
 extern crate shred_derive;
 extern crate shred;
+extern crate hibitset;
 
 use specs::{Dispatcher, DispatcherBuilder};
 
 pub mod class;
 pub mod solver;
+mod track;
 
 pub fn dispatcher<'a, 'b>() -> Dispatcher<'a, 'b> {
     let solver = solver::SolverSystem::default();

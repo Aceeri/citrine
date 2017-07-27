@@ -8,6 +8,7 @@ use cassowary::WeightedRelation::{self, LE, EQ, GE};
 use specs::{Component, Entity, Entities, Fetch, Join, ReadStorage, System, WriteStorage};
 
 use ::class::*;
+use ::track::BitSetJoin;
 
 type Key = (Entity, &'static str);
 
@@ -108,6 +109,7 @@ class!(
 );
 
 pub struct SolverSystem {
+    x: usize,
     solver: Solver,
 
     // Variables
@@ -122,6 +124,7 @@ pub struct SolverSystem {
 impl Default for SolverSystem {
     fn default() -> Self {
         let mut system = SolverSystem {
+            x: 0,
             solver: Solver::new(),
             viewport: [Variable::new(), Variable::new()],
 
@@ -260,7 +263,7 @@ impl<'a> System<'a> for SolverSystem {
             }
 
             // Set left/right/upper/lower bounds for the UI, falls back to the viewport for no parent.
-            for (entity, _, position) in (&*entities, !&class.parents, &class.positions).join() {
+            for (entity, _, position) in (&*entities, &BitSetJoin(flagged.parents.removed()), &class.positions).join() {
                 match position.kind {
                     PositionKind::Absolute |
                     PositionKind::Relative => {

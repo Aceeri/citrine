@@ -1,10 +1,11 @@
 
-use specs::{Component, DenseVecStorage, Entity, FlaggedStorage};
+use specs::{Component, DenseVecStorage, Entity};
+use ::track::TrackStorage;
 
 macro_rules! define_component {
     ( $ident:ident ) => {
         impl Component for $ident {
-            type Storage = FlaggedStorage<Self, DenseVecStorage<Self>>;
+            type Storage = TrackStorage<Self, DenseVecStorage<Self>>;
         }
     }
 }
@@ -23,6 +24,14 @@ pub enum Coordinate {
 pub struct Parent {
     /// Defines another `Entity` as the parent UI of this one.
     pub entity: Entity,
+}
+
+/// Defines the children of this UI entity.
+///
+/// Useful for things like layout constraints.
+#[derive(Clone, Debug)]
+pub struct Children {
+    pub entities: Vec<Entity>,
 }
 
 /// Position of the UI section.
@@ -76,5 +85,6 @@ pub struct Bounds {
 
 // Component quick definitions
 define_component!(Parent);
+define_component!(Children);
 define_component!(Position);
 define_component!(Bounds);
