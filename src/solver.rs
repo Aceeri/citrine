@@ -10,7 +10,17 @@ use specs::{Component, Entity, Entities, Fetch, FetchMut, Join, ReadStorage, Sys
 use ::class::*;
 use ::track::BitSetJoin;
 
-type Key = (Entity, &'static str);
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum KeyId {
+    Entity(Entity),
+    Context,
+}
+
+/// Key for picking out variables used in the solver.
+///
+/// Mainly just useful or attaching some meaning to them.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct Key(KeyId, &'static str);
 
 /// Just a macro to help with the abundant boilerplate related to getting a lot of
 /// components that are related to the UI and converting them into the `FlaggedStorage`s
@@ -62,7 +72,6 @@ macro_rules! class {
             )*
         }
 
-
         impl<'a, 'b> From<&'b ClassData<'a>> for FlaggedClass<'b> {
             fn from(class: &'b ClassData<'a>) -> Self {
                 FlaggedClass {
@@ -111,10 +120,10 @@ class!(
 pub struct SolverSystem {
     solver: Solver,
 
-    // Variables
-    viewport: [Variable; 2], // width, height
+    // Stored dimensions
     dimensions: [u32; 2], 
 
+    // Variables & Constraints
     key_map: HashMap<Key, Variable>,
     var_map: HashMap<Variable, Key>,
 
@@ -125,7 +134,6 @@ impl Default for SolverSystem {
     fn default() -> Self {
         let mut system = SolverSystem {
             solver: Solver::new(),
-            viewport: [Variable::new(), Variable::new()],
             dimensions: [0, 0],
 
             key_map: HashMap::new(),
@@ -144,15 +152,15 @@ impl SolverSystem {
         self.solver.reset();
         
         // Viewport Variables
-        self.solver.add_edit_variable(self.viewport[0], REQUIRED - 1.0);
-        self.solver.add_edit_variable(self.viewport[1], REQUIRED - 1.0);
         self.suggest_viewport(300, 300);
     }
 
     fn suggest_viewport(&mut self, width: u32, height: u32) {
         self.dimensions = [width, height];
-        self.solver.suggest_value(self.viewport[0], width as f64);
-        self.solver.suggest_value(self.viewport[1], height as f64);
+        let width_var = self.fill_variable(&Key(KeyId::Context, "viewport width"), Some(REQUIRED - 1.0));
+        let height_var = self.fill_variable(&Key(KeyId::Context, "viewport height"), Some(REQUIRED - 1.0));
+        self.solver.suggest_value(width_var, width as f64);
+        self.solver.suggest_value(height_var, height as f64);
     }
 
     fn has_variable(&self, key: &Key) -> bool {
@@ -175,6 +183,12 @@ impl SolverSystem {
         }
     }
 
+    fn fill_list(&mut self, input: Vec<(&Key, Option<f64>)>) -> Vec<Variable> {
+        input.iter()
+             .map(|&(key, strength)| self.fill_variable(key, strength) )
+             .collect()
+    }
+
     fn has_constraint(&self, key: &Key) -> bool {
         self.constraints.contains_key(key)
     }
@@ -194,16 +208,14 @@ impl SolverSystem {
     }
 
     fn print_variable(&self, variable: &Variable) {
-        if variable == &self.viewport[0] {
-            print!("Viewport Width:");
-        }
-
-        if variable == &self.viewport[1] {
-            print!("Viewport Height:");
-        }
-
         if let Some(key) = self.var_map.get(variable) {
             print!("{:?}", key);
+        }
+    }
+
+    fn print_variables(&self, variables: Vec<&Variable>) {
+        for variable in variables {
+            self.print_variable(variable);
         }
     }
 }
@@ -231,10 +243,10 @@ impl<'a> System<'a> for SolverSystem {
                 match position.kind {
                     PositionKind::Absolute |
                     PositionKind::Relative => {
-                        let left_bound_key = (entity, "left_bound");
-                        let upper_bound_key = (entity, "upper_bound");
-                        let left_align_key = (entity, "left_align");
-                        let top_align_key = (entity, "top_align");
+                        let left_bound_key = Key(KeyId::Entity(entity), "left_bound");
+                        let upper_bound_key = Key(KeyId::Entity(entity), "upper_bound");
+                        let left_align_key = Key(KeyId::Entity(entity), "left_align");
+                        let top_align_key = Key(KeyId::Entity(entity), "top_align");
                         
                         let left_bound = self.fill_variable(&left_bound_key, None);
                         let upper_bound = self.fill_variable(&upper_bound_key, None);
@@ -253,8 +265,8 @@ impl<'a> System<'a> for SolverSystem {
                     PositionKind::Absolute |
                     PositionKind::Relative => {
                         let mut bound = |string: &'static str, relation: WeightedRelation | {
-                            let key = (entity, string);
-                            let parent_key = (parent.entity, string);
+                            let key = Key(KeyId::Entity(entity), string);
+                            let parent_key = Key(KeyId::Entity(parent.entity), string);
                             let var = self.fill_variable(&key, None);
                             let parent_var = self.fill_variable(&parent_key, None);
 
@@ -276,28 +288,30 @@ impl<'a> System<'a> for SolverSystem {
                 match position.kind {
                     PositionKind::Absolute |
                     PositionKind::Relative => {
-                        let key = (entity, "left_bound");
+                        let width = self.fill_variable(&Key(KeyId::Context, "viewport width"), Some(REQUIRED - 1.0));
+                        let height = self.fill_variable(&Key(KeyId::Context, "viewport height"), Some(REQUIRED - 1.0));
+                        
+                        let key = Key(KeyId::Entity(entity), "left_bound");
                         let var = self.fill_variable(&key, None);
                         let constraint = var |GE(REQUIRED)| 0.0;
                         self.replace_constraint(&key, constraint);
 
-                        let key = (entity, "right_bound");
+                        let key = Key(KeyId::Entity(entity), "right_bound");
                         let var = self.fill_variable(&key, None);
-                        let constraint = var |LE(REQUIRED)| self.viewport[0];
+                        let constraint = var |LE(REQUIRED)| width;
                         self.replace_constraint(&key, constraint);
 
-                        let key = (entity, "upper_bound");
+                        let key = Key(KeyId::Entity(entity), "upper_bound");
                         let var = self.fill_variable(&key, None);
                         let constraint = var |GE(REQUIRED)| 0.0;
                         self.replace_constraint(&key, constraint);
 
-                        let key = (entity, "lower_bound");
+                        let key = Key(KeyId::Entity(entity), "lower_bound");
                         let var = self.fill_variable(&key, None);
-                        let constraint = var |LE(REQUIRED)| self.viewport[1];
+                        let constraint = var |LE(REQUIRED)| height;
                         self.replace_constraint(&key, constraint);
                     },
-                    // TODO: Set bounds for free form positions
-                    PositionKind::Free => { }, // Do nothing.
+                    PositionKind::Free => { }, // No bounds for free floating windows.
                 }
             }
 
@@ -307,9 +321,9 @@ impl<'a> System<'a> for SolverSystem {
             }
 
             for (entity, bound) in (&*entities, flagged.bounds).join() {
-                let left_bound_key = (entity, "left_bound");
-                let right_bound_key = (entity, "right_bound");
-                let width_key = (entity, "width");
+                let left_bound_key = Key(KeyId::Entity(entity), "left_bound");
+                let right_bound_key = Key(KeyId::Entity(entity), "right_bound");
+                let width_key = Key(KeyId::Entity(entity), "width");
 
                 let left_bound = self.fill_variable(&left_bound_key, None);
                 let right_bound = self.fill_variable(&right_bound_key, None);
@@ -324,22 +338,23 @@ impl<'a> System<'a> for SolverSystem {
                     Coordinate::Percent(percent) => {
                         match class.parents.get(entity) {
                             Some(parent) => {
-                                let parent_left_bound = self.fill_variable(&(parent.entity, "left_bound"), None);
-                                let parent_right_bound = self.fill_variable(&(parent.entity, "right_bound"), None);
+                                let parent_left_bound = self.fill_variable(&Key(KeyId::Entity(parent.entity), "left_bound"), None);
+                                let parent_right_bound = self.fill_variable(&Key(KeyId::Entity(parent.entity), "right_bound"), None);
                                 right_bound - left_bound |EQ(WEAK)| (parent_right_bound - parent_left_bound) * percent
                             },
                             None => {
-                                right_bound - left_bound |EQ(WEAK)| self.viewport[0] * percent
+                                let width = self.fill_variable(&Key(KeyId::Context, "viewport width"), Some(REQUIRED - 1.0));
+                                right_bound - left_bound |EQ(WEAK)| width * percent
                             },
                         }
                     }
                 };
 
-                self.replace_constraint(&(entity, "width"), constraint);
+                self.replace_constraint(&Key(KeyId::Entity(entity), "width"), constraint);
 
-                let upper_bound_key = (entity, "upper_bound");
-                let lower_bound_key = (entity, "lower_bound");
-                let height_key = (entity, "height");
+                let upper_bound_key = Key(KeyId::Entity(entity), "upper_bound");
+                let lower_bound_key = Key(KeyId::Entity(entity), "lower_bound");
+                let height_key = Key(KeyId::Entity(entity), "height");
 
                 let upper_bound = self.fill_variable(&upper_bound_key, None);
                 let lower_bound = self.fill_variable(&lower_bound_key, None);
@@ -354,18 +369,19 @@ impl<'a> System<'a> for SolverSystem {
                     Coordinate::Percent(percent) => {
                         match class.parents.get(entity) {
                             Some(parent) => {
-                                let parent_upper_bound = self.fill_variable(&(parent.entity, "upper_bound"), None);
-                                let parent_lower_bound = self.fill_variable(&(parent.entity, "lower_bound"), None);
+                                let parent_upper_bound = self.fill_variable(&Key(KeyId::Entity(parent.entity), "upper_bound"), None);
+                                let parent_lower_bound = self.fill_variable(&Key(KeyId::Entity(parent.entity), "lower_bound"), None);
                                 lower_bound - upper_bound |EQ(WEAK)| (parent_lower_bound - parent_upper_bound) * percent
                             },
                             None => {
-                                lower_bound - upper_bound |EQ(WEAK)| self.viewport[1] * percent
+                                let height = self.fill_variable(&Key(KeyId::Context, "viewport height"), Some(REQUIRED - 1.0));
+                                lower_bound - upper_bound |EQ(WEAK)| height * percent
                             },
                         }
                     }
                 };
 
-                self.replace_constraint(&(entity, "height"), constraint);
+                self.replace_constraint(&Key(KeyId::Entity(entity), "height"), constraint);
             }
         }
 

@@ -15,6 +15,22 @@ pub struct Viewport {
     pub height: u32,
 }
 
+pub struct Grid {
+    columns: Option<usize>,
+    column_stretch: Vec<f64>,
+
+    rows: Option<usize>,
+    row_stretch: Vec<f64>,
+}
+
+pub struct Celled {
+    
+}
+
+pub struct List {
+    
+}
+
 #[derive(Clone, Debug)]
 pub enum Coordinate {
     /// Coordinate space in pixels.
