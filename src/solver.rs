@@ -14,13 +14,35 @@ use ::track::BitSetJoin;
 pub enum KeyId {
     Entity(Entity),
     Context,
+    Unkeyed,
+}
+
+impl Default for KeyId {
+    fn default() -> KeyId {
+        KeyId::Unkeyed
+    }
 }
 
 /// Key for picking out variables used in the solver.
 ///
 /// Mainly just useful or attaching some meaning to them.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Key(KeyId, &'static str);
+pub struct Key(pub KeyId, pub &'static str);
+
+#[derive(Clone, Default, Debug)]
+pub struct Changes {
+    changes: Vec<(Key, Variable, f64)>,
+}
+
+impl Changes {
+    pub fn set_changes(&mut self, changes: Vec<(Key, Variable, f64)>) {
+        self.changes = changes;
+    }
+
+    pub fn changes(&self) -> &Vec<(Key, Variable, f64)> {
+        &self.changes
+    }
+}
 
 /// Just a macro to help with the abundant boilerplate related to getting a lot of
 /// components that are related to the UI and converting them into the `FlaggedStorage`s
@@ -82,6 +104,16 @@ macro_rules! class {
             }
         }
 
+        impl<'a, 'b> From<&'b ClassDataMut<'a>> for FlaggedClass<'b> {
+            fn from(class: &'b ClassDataMut<'a>) -> Self {
+                FlaggedClass {
+                    $(
+                        $name: (&class.$name).open().1,
+                    )*
+                }
+            }
+        }
+
         pub struct ResetSystem;
         impl<'a> System<'a> for ResetSystem {
             type SystemData = ClassDataMut<'a>;
@@ -98,6 +130,7 @@ macro_rules! class {
 class!(
     res [
         viewport => Viewport,
+        changes => Changes,
     ]
     comp [
         parents => Parent,
@@ -213,9 +246,9 @@ impl SolverSystem {
 impl<'a> System<'a> for SolverSystem {
     type SystemData = (
         Entities<'a>,
-        ClassData<'a>
+        ClassDataMut<'a>
     );
-    fn run(&mut self, (entities, class): Self::SystemData) {
+    fn run(&mut self, (entities, mut class): Self::SystemData) {
         // Check if the viewport was changed
         if self.dimensions[0] != class.viewport.width || self.dimensions[1] != class.viewport.height {
             self.suggest_viewport(class.viewport.width, class.viewport.height);
@@ -376,11 +409,15 @@ impl<'a> System<'a> for SolverSystem {
         }
 
         let changes = self.solver.fetch_changes().iter().cloned().collect::<Vec<(Variable, f64)>>();
-        println!("Changed:");
-        for change in changes {
-            print!("  ");
-            self.print_variable(&change.0);
-            println!(" {:?}", change.1);
-        }
+        let changes = changes.iter().map(|&(variable, change)| {
+            (
+                self.var_map.get(&variable)
+                            .unwrap_or(&Key(KeyId::Unkeyed, "Unknown"))
+                            .clone(),
+                variable,
+                change,
+            )
+        }).collect::<Vec<(Key, Variable, f64)>>();
+        class.changes.set_changes(changes);
     }
 }

@@ -26,18 +26,23 @@ impl<'a> System<'a> for ChildrenSystem {
             }
         }
 
-        let mut flagged_children = (&mut children).open().1;
+        {
+            let mut flagged_children = (&mut children).open().1;
 
-        // Clean up children that are no longer parented to this UI.
-        for (entity, mut children) in (&*entities, flagged_children).join() {
-            let mut remove = Vec::new();
-            for (index, child) in children.entities().iter().enumerate() {
-                match parents.get(*child) {
-                    Some(parent) if parent.entity == entity => remove.push(index),
-                    None => remove.push(index),
-                    _ => { },
+            // Clean up children that are no longer parented to this UI.
+            for (entity, mut children) in (&*entities, flagged_children).join() {
+                let mut remove = Vec::new();
+                for (index, child) in children.entities().iter().enumerate() {
+                    match parents.get(*child) {
+                        Some(parent) if parent.entity != entity => { },
+                        _ => remove.push(index),
+                    }
                 }
             }
+        }
+
+        for (entity, child) in (&*entities, &children).join() {
+            println!("{:?} contains {:?}", entity, child.entities());
         }
     }
 }

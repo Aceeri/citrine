@@ -10,6 +10,7 @@ macro_rules! define_component {
     }
 }
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Viewport {
     pub width: u32,
     pub height: u32,
@@ -29,6 +30,14 @@ pub struct Celled {
 
 pub struct List {
     
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Positional {
+    pub top: f64,
+    pub bottom: f64,
+    pub left: f64,
+    pub right: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -116,6 +125,7 @@ pub struct Bounds {
 
 // Component quick definitions
 define_component!(Parent);
+define_component!(Positional);
 define_component!(Children);
 define_component!(Position);
 define_component!(Bounds);
