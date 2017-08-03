@@ -30,16 +30,6 @@ macro_rules! class {
         res [ $( $res_name:ident => $resource:ident, )* ]
         comp [ $( $name:ident => $component:ident, )* ]
     ) => {
-        /*
-        #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-        pub enum Id {
-            Viewport,
-            $(
-                $component,
-            )*
-        }
-        */
-
         #[derive(SystemData)]
         pub struct ClassData<'a> {
             $(
@@ -317,7 +307,7 @@ impl<'a> System<'a> for SolverSystem {
 
             // TODO: Set up variables and constraints for positioning UI rectangles properly
             for (entity, position) in (&*entities, flagged.positions).join() {
-                
+
             }
 
             for (entity, bound) in (&*entities, flagged.bounds).join() {

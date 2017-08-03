@@ -49,10 +49,20 @@ pub struct Parent {
 
 /// Defines the children of this UI entity.
 ///
-/// Useful for things like layout constraints.
-#[derive(Clone, Debug)]
+/// Used for things like layout constraints.
+#[derive(Clone, Debug, Default)]
 pub struct Children {
-    pub entities: Vec<Entity>,
+    entities: Vec<Entity>,
+}
+
+impl Children {
+    pub fn entities(&self) -> &Vec<Entity> {
+        &self.entities
+    }
+
+    pub(crate) fn push(&mut self, entity: Entity) {
+        self.entities.push(entity);
+    }
 }
 
 /// Position of the UI section.
