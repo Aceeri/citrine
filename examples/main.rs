@@ -3,7 +3,7 @@ extern crate citrine;
 extern crate specs;
 
 use specs::{Dispatcher, World};
-use citrine::class::{Viewport, Children, Coordinate, Parent, Position, Positional, Bounds};
+use citrine::class::{Viewport, Children, Coordinate, Parent, Position, Display, Bounds};
 
 fn main() {
     let mut dispatcher = citrine::dispatcher();
@@ -14,7 +14,7 @@ fn main() {
     });
     world.add_resource::<citrine::solver::Changes>(citrine::solver::Changes::default());
     world.register::<Parent>();
-    world.register::<Positional>();
+    world.register::<Display>();
     world.register::<Children>();
     world.register::<Position>();
     world.register::<Bounds>();

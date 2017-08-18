@@ -2,14 +2,14 @@
 use specs::{Entities, Fetch, Join, System, ReadStorage, WriteStorage};
 
 use ::solver::{Changes, Key, KeyId};
-use ::class::{Positional};
+use ::class::{Display};
 
 pub struct ChangedSystem;
 impl<'a> System<'a> for ChangedSystem {
     type SystemData = (
         Entities<'a>,
         Fetch<'a, Changes>,
-        WriteStorage<'a, Positional>,
+        WriteStorage<'a, Display>,
     );
     fn run(&mut self, (entities, changes, mut positions): Self::SystemData) {
         println!("Changes");

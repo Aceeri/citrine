@@ -10,8 +10,8 @@ use specs::{Dispatcher, DispatcherBuilder};
 
 pub mod systems;
 pub mod class;
-pub mod display;
 pub mod solver;
+pub mod ui;
 mod track;
 
 pub fn dispatcher<'a, 'b>() -> Dispatcher<'a, 'b> {

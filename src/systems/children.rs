@@ -15,8 +15,10 @@ impl<'a> System<'a> for ChildrenSystem {
 
         {
             // If an entity is a parent, then it should have children.
-            for (entity, parent, _) in (&*entities, flagged_parents, !&children.check()).join() {
-                children.insert(parent.entity, Children::default());
+            for (entity, parent) in (&*entities, flagged_parents).join() {
+                if let None = children.get(parent.entity) {
+                    children.insert(parent.entity, Children::default());
+                }
             }
 
             // Iterate over changed parents and add the entities to that parents child list.

@@ -44,6 +44,11 @@ impl Changes {
     }
 }
 
+pub struct Keys {
+    key_map: HashMap<Key, Variable>,
+    var_map: HashMap<Variable, Key>,
+}
+
 /// Just a macro to help with the abundant boilerplate related to getting a lot of
 /// components that are related to the UI and converting them into the `FlaggedStorage`s
 /// so we can just iterate over the flagged portions.

@@ -24,16 +24,8 @@ pub struct Grid {
     row_stretch: Vec<f64>,
 }
 
-pub struct Celled {
-    
-}
-
-pub struct List {
-    
-}
-
 #[derive(Clone, Debug, Default)]
-pub struct Positional {
+pub struct Display {
     pub top: f64,
     pub bottom: f64,
     pub left: f64,
@@ -46,6 +38,11 @@ pub enum Coordinate {
     Pixel(f64),
     /// Coordinate space in percentage of parent.
     Percent(f64),
+}
+
+/// Text to be displayed in this segment.
+pub struct Text {
+    pub text: String,
 }
 
 /// Defines the UI entity that is the parent of this
@@ -125,7 +122,8 @@ pub struct Bounds {
 
 // Component quick definitions
 define_component!(Parent);
-define_component!(Positional);
+define_component!(Text);
+define_component!(Display);
 define_component!(Children);
 define_component!(Position);
 define_component!(Bounds);
