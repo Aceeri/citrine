@@ -1,13 +1,14 @@
 
 use specs::{Component, Entity, LazyUpdate, World};
 
-use class::Text;
+use class::{Layout, Text};
 
 pub trait UiBuilder {
     fn with<C>(self, c: C) -> Self where C: Component + Send + Sync;
     fn with_id<C>(self, c: C, id: usize) -> Self where C: Component + Send + Sync;
     fn text(self, s: String) -> Self;
     fn children<'a>(self, list: &'a [Entity]) -> Self;
+    fn layout(self, layout: Box<Layout>) -> Self;
 
     fn done(self) -> Entity;
 }
@@ -91,6 +92,10 @@ impl<T> UiBuilder for T
         self
     }
     fn children<'a>(mut self, children: &'a [Entity]) -> Self {
+        self
+    }
+    fn layout(mut self, layout: Box<Layout>) -> Self {
+        self.get_insert::<Layout>(Layout(layout), 0);
         self
     }
     fn done(self) -> Entity {

@@ -1,4 +1,6 @@
 
+use std::any::Any;
+
 use specs::{Component, DenseVecStorage, Entity};
 use ::track::TrackStorage;
 
@@ -16,10 +18,14 @@ pub struct Viewport {
     pub height: u32,
 }
 
+/// Describes the layout for this ui element.
+///
+/// All children will behave by these.
+pub struct Layout(pub Box<Any + Send + Sync>);
+
 pub struct Grid {
     columns: Option<usize>,
     column_stretch: Vec<f64>,
-
     rows: Option<usize>,
     row_stretch: Vec<f64>,
 }
@@ -43,6 +49,10 @@ pub enum Coordinate {
 /// Text to be displayed in this segment.
 pub struct Text {
     pub text: String,
+    // TODO: Lots of formatting elements.
+    // pub font: String,
+    // pub size: u32,
+    // pub wrap: bool,
 }
 
 /// Defines the UI entity that is the parent of this
@@ -120,10 +130,18 @@ pub struct Bounds {
     pub height: Option<Coordinate>,
 }
 
+/// The computed result of the `Position` and `Bounds` components.
+pub struct AbsolutePosition {
+    pub position: [f32; 2],
+    pub bounds: [f32; 2],
+}
+
 // Component quick definitions
 define_component!(Parent);
 define_component!(Text);
+define_component!(Layout);
 define_component!(Display);
 define_component!(Children);
 define_component!(Position);
+define_component!(AbsolutePosition);
 define_component!(Bounds);
