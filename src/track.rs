@@ -12,17 +12,20 @@ pub struct TrackStorage<C, T> {
     phantom: PhantomData<C>,
 }
 
-impl<C, T: UnprotectedStorage<C>> UnprotectedStorage<C> for TrackStorage<C, T> {
-    fn new() -> Self {
+impl<C, T: Default> Default for TrackStorage<C, T> {
+    fn default() -> Self {
         TrackStorage {
             mask: BitSet::new(),
             inserted: BitSet::new(),
             removed: BitSet::new(),
 
-            storage: T::new(),
+            storage: T::default(),
             phantom: PhantomData,
         }
     }
+}
+
+impl<C, T: UnprotectedStorage<C>> UnprotectedStorage<C> for TrackStorage<C, T> {
     unsafe fn clean<F>(&mut self, has: F)
         where F: Fn(Index) -> bool
     {
@@ -129,18 +132,3 @@ impl<'a, C, T: UnprotectedStorage<C>> Join for &'a mut TrackStorage<C, T> {
     }
 }
 
-pub struct BitSetJoin<B>(pub B);
-
-impl<'a, B> Join for &'a BitSetJoin<B>
-    where B: BitSetLike
-{
-    type Type = Index;
-    type Value = ();
-    type Mask = &'a B;
-    fn open(self) -> (Self::Mask, Self::Value) {
-        (&self.0, ())
-    }
-    unsafe fn get(_: &mut Self::Value, id: Index) -> Self::Type {
-        id
-    }
-}

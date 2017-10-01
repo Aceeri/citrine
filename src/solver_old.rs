@@ -10,6 +10,7 @@ use specs::{Component, Entity, Entities, Fetch, FetchMut, Join, ReadStorage, Sys
 use ::class::*;
 use ::track::BitSetJoin;
 
+/*
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum KeyId {
     Entity(Entity),
@@ -48,6 +49,7 @@ pub struct Keys {
     key_map: HashMap<Key, Variable>,
     var_map: HashMap<Variable, Key>,
 }
+*/
 
 /// Just a macro to help with the abundant boilerplate related to getting a lot of
 /// components that are related to the UI and converting them into the `FlaggedStorage`s
@@ -145,113 +147,12 @@ class!(
     ]
 );
 
-pub struct SolverSystem {
-    solver: Solver,
-
-    // Stored dimensions
-    dimensions: [u32; 2], 
-
-    // Variables & Constraints
-    key_map: HashMap<Key, Variable>,
-    var_map: HashMap<Variable, Key>,
-
-    constraints: HashMap<Key, Constraint>,
-}
-
-impl Default for SolverSystem {
-    fn default() -> Self {
-        let mut system = SolverSystem {
-            solver: Solver::new(),
-            dimensions: [0, 0],
-
-            key_map: HashMap::new(),
-            var_map: HashMap::new(),
-            constraints: HashMap::new(),
-        };
-
-        system.setup();
-        system
-    }
-}
-
-impl SolverSystem {
-    /// Resets the solver and re-adds the necessary variables.
-    fn setup(&mut self) {
-        self.solver.reset();
-        
-        // Viewport Variables
-        self.suggest_viewport(300, 300);
-    }
-
-    fn suggest_viewport(&mut self, width: u32, height: u32) {
-        self.dimensions = [width, height];
-        let width_var = self.fill_variable(&Key(KeyId::Context, "viewport width"), Some(REQUIRED - 1.0));
-        let height_var = self.fill_variable(&Key(KeyId::Context, "viewport height"), Some(REQUIRED - 1.0));
-        self.solver.suggest_value(width_var, width as f64);
-        self.solver.suggest_value(height_var, height as f64);
-    }
-
-    fn has_variable(&self, key: &Key) -> bool {
-        self.key_map.contains_key(key)
-    }
-
-    /// Fills in the variable if it doesnt currently exist in the system.
-    fn fill_variable(&mut self, key: &Key, strength: Option<f64>) -> Variable {
-        match self.key_map.entry(key.clone()) {
-            Entry::Occupied(occupied) => occupied.get().clone(),
-            Entry::Vacant(vacant) => {
-                let var = Variable::new();
-                vacant.insert( var.clone() );
-                self.var_map.insert( var.clone(), key.clone() );
-                if let Some(strength) = strength {
-                    self.solver.add_edit_variable(var, strength);
-                }
-                var
-            }
-        }
-    }
-
-    fn fill_list(&mut self, input: Vec<(&Key, Option<f64>)>) -> Vec<Variable> {
-        input.iter()
-             .map(|&(key, strength)| self.fill_variable(key, strength) )
-             .collect()
-    }
-
-    fn has_constraint(&self, key: &Key) -> bool {
-        self.constraints.contains_key(key)
-    }
-
-    fn replace_constraint(&mut self, key: &Key, constraint: Constraint) {
-        match self.constraints.get_mut(key) {
-            Some(old_constraint) => {
-                if &*old_constraint != &constraint {
-                    self.solver.remove_constraint(&old_constraint);
-                }
-            },
-            _ => { },
-        }
-
-        self.solver.add_constraint(constraint.clone());
-        self.constraints.insert(key.clone(), constraint);
-    }
-
-    fn print_variable(&self, variable: &Variable) {
-        if let Some(key) = self.var_map.get(variable) {
-            print!("{:?}", key);
-        }
-    }
-
-    fn print_variables(&self, variables: Vec<&Variable>) {
-        for variable in variables {
-            self.print_variable(variable);
-        }
-    }
-}
-
+#[derive(Default)]
+pub struct SolverSystem;
 impl<'a> System<'a> for SolverSystem {
     type SystemData = (
         Entities<'a>,
-        ClassDataMut<'a>
+        ClassDataMut<'a>,
     );
     fn run(&mut self, (entities, mut class): Self::SystemData) {
         // Check if the viewport was changed
@@ -261,11 +162,6 @@ impl<'a> System<'a> for SolverSystem {
         
         {
             let flagged = FlaggedClass::from(&class);
-
-            println!("Alive:");
-            for entity in (&*entities).join() {
-                println!("  {:?}", entity);
-            }
 
             for (entity, position) in (&*entities, flagged.positions).join() {
                 match position.kind {
