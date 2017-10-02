@@ -1,13 +1,13 @@
 
 use std::any::Any;
 
-use specs::{Component, DenseVecStorage, Entity};
-use ::track::TrackStorage;
+use specs::{Component, FlaggedStorage, DenseVecStorage, Entity};
+//use ::track::TrackStorage;
 
 macro_rules! define_component {
     ( $ident:ident ) => {
         impl Component for $ident {
-            type Storage = TrackStorage<Self, DenseVecStorage<Self>>;
+            type Storage = FlaggedStorage<Self, DenseVecStorage<Self>>;
         }
     }
 }
@@ -25,25 +25,25 @@ pub struct Layout(pub Box<Any + Send + Sync>);
 
 pub struct Grid {
     columns: Option<usize>,
-    column_stretch: Vec<f64>,
+    column_stretch: Vec<f32>,
     rows: Option<usize>,
-    row_stretch: Vec<f64>,
+    row_stretch: Vec<f32>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Display {
-    pub top: f64,
-    pub bottom: f64,
-    pub left: f64,
-    pub right: f64,
+    pub top: f32,
+    pub bottom: f32,
+    pub left: f32,
+    pub right: f32,
 }
 
 #[derive(Clone, Debug)]
 pub enum Coordinate {
     /// Coordinate space in pixels.
-    Pixel(f64),
+    Pixel(f32),
     /// Coordinate space in percentage of parent.
-    Percent(f64),
+    Percent(f32),
 }
 
 /// Text to be displayed in this segment.
@@ -89,20 +89,18 @@ pub struct Position {
     /// How the position behaves.
     pub kind: PositionKind,
     /// Stretches to the top of the parent.
-    pub top: Option<Coordinate>,
+    pub x: Option<Coordinate>,
     /// Stretches to the left.
-    pub left: Option<Coordinate>,
-    /// Stretches to the bottom.
-    pub bottom: Option<Coordinate>,
-    /// Stretches to the right.
-    pub right: Option<Coordinate>,
+    pub y: Option<Coordinate>,
+    /// Z-ordering of UI.
+    pub z: Option<usize>,
 }
 
 /// Type of positioning. Default is `Relative`.
 #[derive(Clone, Debug)]
 pub enum PositionKind {
     /// Positions in the parent's dimensions without regard to other portions of the UI.
-    Absolute,
+    Free,
     /// Positions relative to its normal spot in the layout.
     /// `top`/`left`/`bottom`/`right` properties of the `Position` are preferred over the
     /// `width` and `height` of the `Bounds`.
@@ -115,12 +113,12 @@ pub enum PositionKind {
     /// of the `width` and `height` of the `Bounds`.
     ///
     /// Useful for things like floating windows and such.
-    Free,
+    Absolute,
 }
 
 impl Default for PositionKind {
     fn default() -> Self {
-        PositionKind::Relative
+        PositionKind::Absolute
     }
 }
 
@@ -131,9 +129,15 @@ pub struct Bounds {
 }
 
 /// The computed result of the `Position` and `Bounds` components.
+#[derive(Clone, Debug, Default)]
 pub struct AbsolutePosition {
-    pub position: [f32; 2],
-    pub bounds: [f32; 2],
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+
+    /// Z-ordering.
+    pub z: usize,
 }
 
 // Component quick definitions
